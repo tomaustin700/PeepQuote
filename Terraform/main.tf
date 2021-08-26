@@ -85,3 +85,9 @@ resource "azurerm_function_app" "function" {
 
 }
 
+resource "azurerm_static_site" "site" {
+  name                     = "peepquotesite"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+}
+
