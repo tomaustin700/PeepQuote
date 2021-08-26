@@ -82,6 +82,13 @@ resource "azurerm_function_app" "function" {
     "WEBSITE_ENABLE_SYNC_UPDATE_SITE" = "true",
     "ConnectionString"                = "",
   }
+  site_config {
+    cors {
+      allowed_origins = [
+        "*"
+      ]
+    }
+  }
 
 }
 
