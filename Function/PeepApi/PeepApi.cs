@@ -48,7 +48,6 @@ namespace PeepApi
             int indexValue = rnd.Next(0, quotes.Count - 1);
 
             var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
 
             await response.WriteAsJsonAsync(new { quote = quotes[indexValue].Item1, episode = quotes[indexValue].Item2 });
 
