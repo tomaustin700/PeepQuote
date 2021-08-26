@@ -3,7 +3,7 @@ name: "Terraform"
 on:
   push:
     paths:
-      - "terraform/**"
+      - "Terraform/**"
     branches:
       - main
   pull_request:
