@@ -25,7 +25,7 @@ namespace PeepApi
             FunctionContext executionContext)
         {
 
-            var quotes = new List<string>();
+            var quotes = new List<(string, string)>();
             foreach (BlobItem blob in _blobContainerClient.GetBlobs())
             {
                 BlobClient blobClient = _blobContainerClient.GetBlobClient(blob.Name);
@@ -39,7 +39,7 @@ namespace PeepApi
                     {
                         var line = await streamReader.ReadLineAsync();
                         if (!line.StartsWith("["))
-                            quotes.Add(line);
+                            quotes.Add((line, blob.Name.Replace(".txt", "")));
                     }
                 }
             }
@@ -50,7 +50,7 @@ namespace PeepApi
             var response = req.CreateResponse(HttpStatusCode.OK);
             response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
 
-            response.WriteString(quotes[indexValue]);
+            await response.WriteAsJsonAsync(new { quote = quotes[indexValue].Item1, episode = quotes[indexValue].Item2 });
 
             return response;
         }
