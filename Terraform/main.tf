@@ -35,6 +35,7 @@ resource "azurerm_resource_group" "rg" {
   location = "uksouth"
 }
 
+
 resource "azurerm_storage_account" "functionstorage" {
   name                     = "pqstorage"
   resource_group_name      = azurerm_resource_group.rg.name
