@@ -1,0 +1,65 @@
+name: "Terraform"
+
+on:
+  push:
+    paths:
+      - "terraform/**"
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  terraform:
+    name: "Terraform"
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+    runs-on: ubuntu-latest
+    environment: production
+
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        working-directory: terraform
+        shell: bash
+
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        if: github.event_name == 'pull_request'
+        run: terraform plan -no-color
+        env:
+          TF_VAR_access_token: ${{ secrets.ACCESS_TOKEN}}
+          TF_VAR_access_token_secret: ${{ secrets.ACCESS_TOKEN_SECRET }}
+          TF_VAR_consumer_key: ${{ secrets.CONSUMER_KEY }}
+          TF_VAR_consumer_secret: ${{ secrets.CONSUMER_SECRET }}
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve
+        env:
+          TF_VAR_access_token: ${{ secrets.ACCESS_TOKEN}}
+          TF_VAR_access_token_secret: ${{ secrets.ACCESS_TOKEN_SECRET }}
+          TF_VAR_consumer_key: ${{ secrets.CONSUMER_KEY }}
+          TF_VAR_consumer_secret: ${{ secrets.CONSUMER_SECRET }}
