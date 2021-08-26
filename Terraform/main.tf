@@ -80,10 +80,7 @@ resource "azurerm_function_app" "function" {
     "FUNCTIONS_WORKER_RUNTIME"        = "dotnet-isolated",
     "WEBSITE_RUN_FROM_PACKAGE"        = "1",
     "WEBSITE_ENABLE_SYNC_UPDATE_SITE" = "true",
-    "AccessToken"                     = var.access_token,
-    "AccessTokenSecret"               = var.access_token_secret,
-    "ConsumerKey"                     = var.consumer_key,
-    "ConsumerSecret"                  = var.consumer_secret,
+    "ConnectionString"                = "",
   }
 
 }
