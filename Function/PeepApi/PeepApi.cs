@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
@@ -32,14 +33,21 @@ namespace PeepApi
 
                 var content = await blobClient.DownloadAsync();
                 var text = content.Value.Content;
+                string episodeName = null;
 
                 using (var streamReader = new StreamReader(text))
                 {
                     while (!streamReader.EndOfStream)
                     {
                         var line = await streamReader.ReadLineAsync();
-                        if (!line.StartsWith("["))
-                            quotes.Add((line, blob.Name.Replace(".txt", "")));
+
+                        if (string.IsNullOrEmpty(episodeName))
+                            episodeName = line;
+                        else
+                        {
+                            if (!line.StartsWith("["))
+                                quotes.Add((line, blob.Name.Replace(".txt", "") + $" - {episodeName}"));
+                        }
                     }
                 }
             }
@@ -72,6 +80,7 @@ namespace PeepApi
 
             using (var streamReader = new StreamReader(text))
             {
+                quotes = quotes.Skip(1).ToList();
                 while (!streamReader.EndOfStream)
                 {
                     var line = await streamReader.ReadLineAsync();
