@@ -33,7 +33,9 @@
 <div class="bgimg w3-display-container w3-animate-opacity w3-text-black">
 
     <div id="content" class="w3-display-middle">
-        <h1 id="quote" class="w3-xxlarge centre-align">Loading</h1>
+        <div id="outer" class="w3-jumbo centre-align desktop-quote" >
+            <div id="quote" >Loading</div>
+        </div>
         <p id="episode" class="w3-large w3-center"></p>
 
     </div>
@@ -78,7 +80,7 @@
         $quoteText = document.getElementById("quote")
 
         if (isMobile) {
-            $quoteText.classList.add("w3-small");
+            $outer.classList.add("mobile-quote");
             document.getElementById("episode").classList.add("w3-tiny");
         }
 
@@ -87,7 +89,19 @@
         $quoteText.textContent = `${quote}`;
         document.getElementById("episode").textContent = `${episode}`;
 
+        resize_to_fit();
+
     })
+
+    function resize_to_fit() {
+        var fontsize = $('div#outer div').css('font-size');
+        $('div#outer div').css('fontSize', parseFloat(fontsize) - 1);
+
+        if ($('div#outer div').height() >= $('div#outer').height()) {
+            resize_to_fit();
+        }
+
+    }
 
 </script>
 

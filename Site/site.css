@@ -14,3 +14,13 @@
 .centre-align{
     text-align: center;
 }
+
+.desktop-quote {
+  width: 1000px;
+  height: 100px;
+}
+
+.mobile-quote {
+  width: 400px!important;
+  height: 200px!important;
+}
