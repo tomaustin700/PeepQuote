@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
@@ -10,6 +11,7 @@ using Azure.Storage.Blobs.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using PeepApi.Classes;
 
 namespace PeepApi
 {
@@ -63,18 +65,38 @@ namespace PeepApi
             return response;
         }
 
-        [Function(nameof(QuoteSearch))]
-        public async Task<HttpResponseData> QuoteSearch([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
+        [Function(nameof(Search))]
+        public async Task<HttpResponseData> Search([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
             FunctionContext executionContext)
         {
-            var search = executionContext.BindingContext.BindingData["search"].ToString();
 
-            var searchCleaned = new string(search.Where(c => !char.IsPunctuation(c)).ToArray());
+            var searchParameters = await JsonSerializer.DeserializeAsync<SearchParameters>(req.Body);
+            string searchCleaned = null;
+            if (!string.IsNullOrEmpty(searchParameters.SearchTerm))
+                searchCleaned = new string(searchParameters.SearchTerm.Where(c => !char.IsPunctuation(c)).ToArray());
+
+            int matchCount = 0;
 
             var quotes = new List<(string, string)>();
             var matches = new List<(string, string)>();
             foreach (BlobItem blob in _blobContainerClient.GetBlobs())
             {
+
+                if (searchParameters.SeriesNumber.HasValue)
+                {
+                    var blobNameCleaned = blob.Name.ToLower().Replace("0", "").Replace("s", "");
+                    if (!blobNameCleaned.StartsWith(searchParameters.SeriesNumber.ToString()))
+                        continue;
+                }
+
+                if (searchParameters.EpisodeNumber.HasValue)
+                {
+                    var name = blob.Name.Replace(".txt", "");
+                    var blobEpisodeNumber = name.Substring(name.Length - 1);
+                    if (searchParameters.EpisodeNumber.Value.ToString() != blobEpisodeNumber)
+                        continue;
+                }
+
                 BlobClient blobClient = _blobContainerClient.GetBlobClient(blob.Name);
 
                 var content = await blobClient.DownloadAsync();
@@ -92,7 +114,17 @@ namespace PeepApi
                         else
                         {
                             if (!line.StartsWith("["))
-                                quotes.Add((line, blob.Name.Replace(".txt", "") + $" - {episodeName}"));
+                            {
+                                var name = blob.Name.Replace(".txt", "");
+
+                                if (!string.IsNullOrEmpty(searchParameters.Person))
+                                {
+                                    if (line.ToLower().StartsWith(searchParameters.Person.ToLower()))
+                                        quotes.Add((line, name + $" - {episodeName}"));
+                                }
+                                else
+                                    quotes.Add((line, name + $" - {episodeName}"));
+                            }
                         }
                     }
                 }
@@ -100,10 +132,22 @@ namespace PeepApi
 
             foreach (var quote in quotes)
             {
-                var quoteCleaned = new string(quote.Item1.Where(c => !char.IsPunctuation(c)).ToArray());
-
-                if (Regex.IsMatch(quoteCleaned.ToLower(), @$"\b{searchCleaned.ToLower()}\b"))
+                if (!string.IsNullOrEmpty(searchCleaned))
                 {
+                    var quoteCleaned = new string(quote.Item1.Where(c => !char.IsPunctuation(c)).ToArray());
+                    var regexTerm = @$"\b{searchCleaned.ToLower()}\b";
+
+                    var match = Regex.Match(quoteCleaned.ToLower(), regexTerm);
+
+                    if (match.Success)
+                    {
+                        matchCount += Regex.Matches(quoteCleaned.ToLower(), regexTerm).Count;
+                        matches.Add(quote);
+                    }
+                }
+                else
+                {
+                    matchCount += 1;
                     matches.Add(quote);
                 }
             }
@@ -111,7 +155,7 @@ namespace PeepApi
 
             var response = req.CreateResponse(HttpStatusCode.OK);
 
-            await response.WriteAsJsonAsync(matches.Select(a => new { quote = a.Item1, episode = a.Item2 }));
+            await response.WriteAsJsonAsync(new SearchResult() { Count = matchCount, Results = matches.Select(a => new QuoteData() { Quote = a.Item1, Episode = a.Item2 }) });
 
 
             return response;

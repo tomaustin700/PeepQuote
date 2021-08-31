@@ -8,7 +8,7 @@ using IHost host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices((context, services) =>
     {
-        services.AddAzureClients(azure => azure.AddBlobServiceClient(Environment.GetEnvironmentVariable("ConnectionString")));
+       services.AddAzureClients(azure => azure.AddBlobServiceClient(Environment.GetEnvironmentVariable("ConnectionString")));
     })
     .Build();
 
