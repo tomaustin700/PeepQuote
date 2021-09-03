@@ -136,14 +136,35 @@ namespace PeepApi
                             {
                                 var name = blob.Name.Replace(".txt", "");
 
-
-                                if (!string.IsNullOrEmpty(searchParameters.Person))
-                                {
-                                    if (line.ToLower().StartsWith(searchParameters.Person.ToLower()))
-                                        quotes.Add((line.Split(":")[1], name + $" - {episodeName}", line.Split(":")[0]));
-                                }
+                                if (!string.IsNullOrEmpty(searchParameters.Person) && !line.ToLower().StartsWith(searchParameters.Person.ToLower()))
+                                    continue;
                                 else
-                                    quotes.Add((line.Split(":")[1], name + $" - {episodeName}", line.Split(":")[0]));
+                                {
+                                    var quote = line.Split(":")[1];
+                                    var person = line.Split(":")[0];
+
+                                    if (!string.IsNullOrEmpty(searchCleaned))
+                                    {
+                                        var quoteCleaned = new string(quote.Where(c => !char.IsPunctuation(c)).ToArray());
+                                        var regexTerm = @$"\b{searchCleaned.ToLower()}\b";
+
+                                        var mCount = Regex.Matches(quoteCleaned.ToLower(), regexTerm).Count;
+
+                                        if (mCount > 0)
+                                        {
+                                            matchCount += mCount;
+                                            quotes.Add((quote, name + $" - {episodeName}", person));
+
+                                        }
+                                    }
+                                    else
+                                    {
+                                        quotes.Add((quote, name + $" - {episodeName}", person));
+                                        matchCount += 1;
+
+                                    }
+
+                                }
 
                             }
                         }
@@ -151,32 +172,9 @@ namespace PeepApi
                 }
             }
 
-            foreach (var quote in quotes)
-            {
-                if (!string.IsNullOrEmpty(searchCleaned))
-                {
-                    var quoteCleaned = new string(quote.Item1.Where(c => !char.IsPunctuation(c)).ToArray());
-                    var regexTerm = @$"\b{searchCleaned.ToLower()}\b";
-
-                    var match = Regex.Match(quoteCleaned.ToLower(), regexTerm);
-
-                    if (match.Success)
-                    {
-                        matchCount += Regex.Matches(quoteCleaned.ToLower(), regexTerm).Count;
-                        matches.Add(quote);
-                    }
-                }
-                else
-                {
-                    matchCount += 1;
-                    matches.Add(quote);
-                }
-            }
-
-
             var response = req.CreateResponse(HttpStatusCode.OK);
 
-            await response.WriteAsJsonAsync(new SearchResult() { Count = matchCount, Results = matches.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
+            await response.WriteAsJsonAsync(new SearchResult() { Count = matchCount, Results = quotes.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
 
 
             return response;
