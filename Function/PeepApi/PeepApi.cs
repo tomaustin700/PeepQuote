@@ -97,7 +97,6 @@ namespace PeepApi
             int matchCount = 0;
 
             var quotes = new List<(string quote, string episode, string person)>();
-            var matches = new List<(string quote, string episode, string person)>();
             foreach (BlobItem blob in _blobContainerClient.GetBlobs())
             {
 
