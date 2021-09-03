@@ -34,5 +34,8 @@ namespace PeepApi
             new OpenApiServer() { Url = "https://api.peepquote.com/" }
         };
 
+        public override OpenApiVersionType OpenApiVersion { get; set; } = OpenApiVersionType.V3;
+
+
     }
 }

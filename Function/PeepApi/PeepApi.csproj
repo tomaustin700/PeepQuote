@@ -21,7 +21,4 @@
       <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="dist\custom.css" />
-  </ItemGroup>
 </Project>
