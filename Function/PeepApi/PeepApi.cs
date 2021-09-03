@@ -10,7 +10,10 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
 using PeepApi.Classes;
 
 namespace PeepApi
@@ -66,8 +69,13 @@ namespace PeepApi
             return response;
         }
 
+        [OpenApiOperation(operationId: "search", Summary = "Allows searching through all of the Peep Show dialog",  Visibility = OpenApiVisibilityType.Undefined)]
+        [OpenApiRequestBody(contentType: "application/json", bodyType: typeof(SearchParameters), Required = true, Description = "Search parameters for querying Peep Show")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(SearchResult), Summary = "Search results returned from the search")]
+        [OpenApiResponseWithoutBody(statusCode: HttpStatusCode.BadRequest, Summary = "No body specified")]
+
         [Function(nameof(Search))]
-        public async Task<HttpResponseData> Search([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
+        public async Task<HttpResponseData> Search([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestData req,
             FunctionContext executionContext)
         {
 
