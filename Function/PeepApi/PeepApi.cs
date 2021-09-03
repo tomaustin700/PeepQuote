@@ -60,6 +60,7 @@ namespace PeepApi
 
             var response = req.CreateResponse(HttpStatusCode.OK);
 
+
             await response.WriteAsJsonAsync(new { quote = quotes[indexValue].Item1, episode = quotes[indexValue].Item2 });
 
             return response;
@@ -70,15 +71,33 @@ namespace PeepApi
             FunctionContext executionContext)
         {
 
-            var searchParameters = await JsonSerializer.DeserializeAsync<SearchParameters>(req.Body);
+            SearchParameters searchParameters = null;
+            try
+            {
+                var serializeOptions = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true,
+                    PropertyNameCaseInsensitive = true
+                };
+
+                searchParameters = await JsonSerializer.DeserializeAsync<SearchParameters>(req.Body, serializeOptions);
+            }
+            catch (JsonException)
+            {
+                var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                badResponse.WriteString("No Body Specified");
+                return badResponse;
+            }
+
             string searchCleaned = null;
             if (!string.IsNullOrEmpty(searchParameters.SearchTerm))
                 searchCleaned = new string(searchParameters.SearchTerm.Where(c => !char.IsPunctuation(c)).ToArray());
 
             int matchCount = 0;
 
-            var quotes = new List<(string, string)>();
-            var matches = new List<(string, string)>();
+            var quotes = new List<(string quote, string episode, string person)>();
+            var matches = new List<(string quote, string episode, string person)>();
             foreach (BlobItem blob in _blobContainerClient.GetBlobs())
             {
 
@@ -117,13 +136,15 @@ namespace PeepApi
                             {
                                 var name = blob.Name.Replace(".txt", "");
 
+
                                 if (!string.IsNullOrEmpty(searchParameters.Person))
                                 {
                                     if (line.ToLower().StartsWith(searchParameters.Person.ToLower()))
-                                        quotes.Add((line, name + $" - {episodeName}"));
+                                        quotes.Add((line.Split(":")[1], name + $" - {episodeName}", line.Split(":")[0]));
                                 }
                                 else
-                                    quotes.Add((line, name + $" - {episodeName}"));
+                                    quotes.Add((line.Split(":")[1], name + $" - {episodeName}", line.Split(":")[0]));
+
                             }
                         }
                     }
@@ -155,7 +176,7 @@ namespace PeepApi
 
             var response = req.CreateResponse(HttpStatusCode.OK);
 
-            await response.WriteAsJsonAsync(new SearchResult() { Count = matchCount, Results = matches.Select(a => new QuoteData() { Quote = a.Item1, Episode = a.Item2 }) });
+            await response.WriteAsJsonAsync(new SearchResult() { Count = matchCount, Results = matches.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
 
 
             return response;
