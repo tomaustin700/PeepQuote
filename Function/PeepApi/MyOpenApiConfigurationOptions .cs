@@ -31,8 +31,7 @@ namespace PeepApi
 
         public override List<OpenApiServer> Servers { get; set; } = new List<OpenApiServer>()
         {
-            new OpenApiServer() { Url = "http://localhost:7071/" },
-            new OpenApiServer() { Url = "https://api.peepquote.com/" },
+            new OpenApiServer() { Url = "https://api.peepquote.com/" }
         };
 
     }
