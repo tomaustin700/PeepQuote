@@ -71,7 +71,7 @@ namespace PeepApi
 
 
 
-        [OpenApiOperation(operationId: "search", Summary = "Allows searching through all of the Peep Show dialog",  Visibility = OpenApiVisibilityType.Undefined)]
+        [OpenApiOperation(operationId: "search", Summary = "Allows searching through all of the Peep Show dialog", Visibility = OpenApiVisibilityType.Undefined)]
         [OpenApiRequestBody(contentType: "application/json", bodyType: typeof(SearchParameters), Required = true, Description = "Search parameters for querying Peep Show")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(SearchResult), Summary = "Search results returned from the search")]
         [OpenApiResponseWithoutBody(statusCode: HttpStatusCode.BadRequest, Summary = "No body specified")]
@@ -106,78 +106,52 @@ namespace PeepApi
 
             int matchCount = 0;
 
+            BlobClient blobClient = _blobContainerClient.GetBlobClient("content.json");
+
+            var content = await blobClient.DownloadAsync();
+            var json = content.Value.Content;
+
+            var data = await JsonSerializer.DeserializeAsync<List<JsonData>>(json);
             var quotes = new List<(string quote, string episode, string person)>();
-            foreach (BlobItem blob in _blobContainerClient.GetBlobs())
+
+
+            if (searchParameters.SeriesNumber.HasValue)
             {
+                data = data.Where(a => a.SeriesNumber == searchParameters.SeriesNumber.Value).ToList();
+            }
 
-                if (searchParameters.SeriesNumber.HasValue)
+            if (searchParameters.EpisodeNumber.HasValue)
+            {
+                data = data.Where(a => a.EpisodeNumber == searchParameters.EpisodeNumber.Value).ToList();
+            }
+
+            if (!string.IsNullOrEmpty(searchParameters.Person))
+            {
+                data = data.Where(a => a.Person.ToLower() == searchParameters.Person.ToLower()).ToList();
+            }
+
+
+            foreach (var quote in data)
+            {
+                if (!string.IsNullOrEmpty(searchCleaned))
                 {
-                    var blobNameCleaned = blob.Name.ToLower().Replace("0", "").Replace("s", "");
-                    if (!blobNameCleaned.StartsWith(searchParameters.SeriesNumber.ToString()))
-                        continue;
-                }
+                    var quoteCleaned = new string(quote.Quote.Where(c => !char.IsPunctuation(c)).ToArray());
+                    var regexTerm = @$"\b{searchCleaned.ToLower()}\b";
 
-                if (searchParameters.EpisodeNumber.HasValue)
-                {
-                    var name = blob.Name.Replace(".txt", "");
-                    var blobEpisodeNumber = name.Substring(name.Length - 1);
-                    if (searchParameters.EpisodeNumber.Value.ToString() != blobEpisodeNumber)
-                        continue;
-                }
+                    var mCount = Regex.Matches(quoteCleaned.ToLower(), regexTerm).Count;
 
-                BlobClient blobClient = _blobContainerClient.GetBlobClient(blob.Name);
-
-                var content = await blobClient.DownloadAsync();
-                var text = content.Value.Content;
-                string episodeName = null;
-
-                using (var streamReader = new StreamReader(text))
-                {
-                    while (!streamReader.EndOfStream)
+                    if (mCount > 0)
                     {
-                        var line = await streamReader.ReadLineAsync();
+                        matchCount += mCount;
+                        quotes.Add((quote.Quote, $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
 
-                        if (string.IsNullOrEmpty(episodeName))
-                            episodeName = line;
-                        else
-                        {
-                            if (!line.StartsWith("["))
-                            {
-                                var name = blob.Name.Replace(".txt", "");
-
-                                if (!string.IsNullOrEmpty(searchParameters.Person) && !line.ToLower().StartsWith(searchParameters.Person.ToLower()))
-                                    continue;
-                                else
-                                {
-                                    var quote = line.Split(":")[1];
-                                    var person = line.Split(":")[0];
-
-                                    if (!string.IsNullOrEmpty(searchCleaned))
-                                    {
-                                        var quoteCleaned = new string(quote.Where(c => !char.IsPunctuation(c)).ToArray());
-                                        var regexTerm = @$"\b{searchCleaned.ToLower()}\b";
-
-                                        var mCount = Regex.Matches(quoteCleaned.ToLower(), regexTerm).Count;
-
-                                        if (mCount > 0)
-                                        {
-                                            matchCount += mCount;
-                                            quotes.Add((quote, name + $" - {episodeName}", person));
-
-                                        }
-                                    }
-                                    else
-                                    {
-                                        quotes.Add((quote, name + $" - {episodeName}", person));
-                                        matchCount += 1;
-
-                                    }
-
-                                }
-
-                            }
-                        }
                     }
+                }
+                else
+                {
+                    quotes.Add((quote.Quote, $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
+                    matchCount += 1;
+
                 }
             }
 
