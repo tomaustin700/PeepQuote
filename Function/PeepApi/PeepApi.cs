@@ -143,13 +143,13 @@ namespace PeepApi
                     if (mCount > 0)
                     {
                         matchCount += mCount;
-                        quotes.Add((quote.Quote, $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
+                        quotes.Add((quote.Quote.Trim(), $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
 
                     }
                 }
                 else
                 {
-                    quotes.Add((quote.Quote, $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
+                    quotes.Add((quote.Quote.Trim(), $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
                     matchCount += 1;
 
                 }
