@@ -13,7 +13,7 @@ namespace PeepApi
     {
         public override OpenApiInfo Info { get; set; } = new OpenApiInfo()
         {
-            Version = "1.0.0",
+            Version = "2.0.0",
             Title = "PeepQuote API",
             Description = "Allows querying the Peep Show script",
             Contact = new OpenApiContact()

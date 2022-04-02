@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.Http;
 using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
+using System.Linq;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
-using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
+using System.Net;
 using PeepApi.Classes;
+using Microsoft.AspNetCore.Mvc;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Http;
+using Azure.Storage.Blobs.Models;
+using System.Text.Json;
 
 namespace PeepApi
 {
@@ -27,58 +27,85 @@ namespace PeepApi
             _blobContainerClient = blobServiceClient.GetBlobContainerClient("scripts");
         }
 
-        [Function(nameof(GetRandomQuote))]
-        public async Task<HttpResponseData> GetRandomQuote([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
-            FunctionContext executionContext)
+        [OpenApiOperation(operationId: "search", Summary = "Allows searching through all of the Peep Show dialog", Visibility = OpenApiVisibilityType.Undefined)]
+        [OpenApiParameter("searchTerm")]
+        [OpenApiParameter("seriesNumber")]
+        [OpenApiParameter("episodeNumber")]
+        [OpenApiParameter("person")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(SearchResult), Summary = "Search results returned from the search")]
+
+        [FunctionName(nameof(SearchV2))]
+        public async Task<IActionResult> SearchV2([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "v2/Search")] HttpRequest req)
         {
 
-            var quotes = new List<(string, string)>();
-            foreach (BlobItem blob in _blobContainerClient.GetBlobs())
+            var searchTerm = req.Query["searchTerm"]; 
+            var seriesNumber = req.Query["seriesNumber"]; 
+            var episodeNumber = req.Query["episodeNumber"]; 
+            var person = req.Query["person"];
+
+            string searchCleaned = null;
+            if (!string.IsNullOrEmpty(searchTerm))
+                searchCleaned = new string(((string)searchTerm).Where(c => !char.IsPunctuation(c)).ToArray());
+
+            int matchCount = 0;
+
+            BlobClient blobClient = _blobContainerClient.GetBlobClient("content.json");
+
+            var content = await blobClient.DownloadAsync();
+            var json = content.Value.Content;
+
+            var data = await JsonSerializer.DeserializeAsync<List<JsonData>>(json);
+            var quotes = new List<(string quote, string episode, string person)>();
+
+
+            if (!string.IsNullOrEmpty(seriesNumber))
             {
-                BlobClient blobClient = _blobContainerClient.GetBlobClient(blob.Name);
+                data = data.Where(a => a.SeriesNumber == int.Parse(seriesNumber)).ToList();
+            }
 
-                var content = await blobClient.DownloadAsync();
-                var text = content.Value.Content;
-                string episodeName = null;
+            if (!string.IsNullOrEmpty(episodeNumber))
+            {
+                data = data.Where(a => a.EpisodeNumber == int.Parse(episodeNumber)).ToList();
+            }
 
-                using (var streamReader = new StreamReader(text))
+            if (!string.IsNullOrEmpty(person))
+            {
+                data = data.Where(a => a.Person.ToLower() == person).ToList();
+            }
+
+
+            foreach (var quote in data)
+            {
+                if (!string.IsNullOrEmpty(searchCleaned))
                 {
-                    while (!streamReader.EndOfStream)
-                    {
-                        var line = await streamReader.ReadLineAsync();
+                    var quoteCleaned = new string(quote.Quote.Where(c => !char.IsPunctuation(c)).ToArray());
+                    var regexTerm = @$"\b{searchCleaned.ToLower()}\b";
 
-                        if (string.IsNullOrEmpty(episodeName))
-                            episodeName = line;
-                        else
-                        {
-                            if (!line.StartsWith("["))
-                                quotes.Add((line, blob.Name.Replace(".txt", "") + $" - {episodeName}"));
-                        }
+                    var mCount = Regex.Matches(quoteCleaned.ToLower(), regexTerm).Count;
+
+                    if (mCount > 0)
+                    {
+                        matchCount += mCount;
+                        quotes.Add((quote.Quote.Trim(), $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
+
                     }
+                }
+                else
+                {
+                    quotes.Add((quote.Quote.Trim(), $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
+                    matchCount += 1;
+
                 }
             }
 
-            var rnd = new Random();
-            int indexValue = rnd.Next(0, quotes.Count - 1);
 
-            var response = req.CreateResponse(HttpStatusCode.OK);
+            return new OkObjectResult(new SearchResult() { Count = matchCount, Results = quotes.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
 
-
-            await response.WriteAsJsonAsync(new { quote = quotes[indexValue].Item1, episode = quotes[indexValue].Item2 });
-
-            return response;
         }
 
 
-
-        [OpenApiOperation(operationId: "search", Summary = "Allows searching through all of the Peep Show dialog", Visibility = OpenApiVisibilityType.Undefined)]
-        [OpenApiRequestBody(contentType: "application/json", bodyType: typeof(SearchParameters), Required = true, Description = "Search parameters for querying Peep Show")]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(SearchResult), Summary = "Search results returned from the search")]
-        [OpenApiResponseWithoutBody(statusCode: HttpStatusCode.BadRequest, Summary = "No body specified")]
-
-        [Function(nameof(Search))]
-        public async Task<HttpResponseData> Search([HttpTrigger(AuthorizationLevel.Anonymous, "post", "get")] HttpRequestData req,
-            FunctionContext executionContext)
+        [FunctionName(nameof(Search))]
+        public async Task<IActionResult> Search([HttpTrigger(AuthorizationLevel.Anonymous, "post", "get")] HttpRequest req)
         {
 
             SearchParameters searchParameters = null;
@@ -95,9 +122,7 @@ namespace PeepApi
             }
             catch (JsonException)
             {
-                var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                badResponse.WriteString("No Body Specified");
-                return badResponse;
+                return new BadRequestObjectResult("No Body Specified");
             }
 
             string searchCleaned = null;
@@ -155,51 +180,11 @@ namespace PeepApi
                 }
             }
 
-            var response = req.CreateResponse(HttpStatusCode.OK);
 
-            await response.WriteAsJsonAsync(new SearchResult() { Count = matchCount, Results = quotes.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
+            return new OkObjectResult(new SearchResult() { Count = matchCount, Results = quotes.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
 
-
-            return response;
         }
 
-        [Function(nameof(GetEpisode))]
-        public async Task<HttpResponseData> GetEpisode([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
-            FunctionContext executionContext)
-        {
-            var quotes = new List<string>();
-
-            var episode = executionContext.BindingContext.BindingData["episode"].ToString();
-
-            if (episode.Contains("0"))
-                episode = episode.Replace("0", "");
-
-            BlobClient blobClient = _blobContainerClient.GetBlobClient(episode + ".txt");
-
-            var content = await blobClient.DownloadAsync();
-            var text = content.Value.Content;
-
-            using (var streamReader = new StreamReader(text))
-            {
-                quotes = quotes.Skip(1).ToList();
-                while (!streamReader.EndOfStream)
-                {
-                    var line = await streamReader.ReadLineAsync();
-                    quotes.Add(line);
-                }
-            }
-
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-
-            foreach (var quote in quotes)
-            {
-                response.WriteString(quote);
-                response.WriteString(Environment.NewLine);
-            }
-
-
-            return response;
-        }
+       
     }
 }

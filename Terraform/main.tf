@@ -72,12 +72,12 @@ resource "azurerm_function_app" "function" {
   name                       = "peepquote"
   location                   = azurerm_resource_group.rg.location
   resource_group_name        = azurerm_resource_group.rg.name
-  version                    = "~3"
+  version                    = "~4"
   app_service_plan_id        = azurerm_app_service_plan.serviceplan.id
   storage_account_name       = azurerm_storage_account.functionstorage.name
   storage_account_access_key = azurerm_storage_account.functionstorage.primary_access_key
   app_settings = {
-    "FUNCTIONS_WORKER_RUNTIME"        = "dotnet-isolated",
+    "FUNCTIONS_WORKER_RUNTIME"        = "dotnet",
     "WEBSITE_RUN_FROM_PACKAGE"        = "1",
     "WEBSITE_ENABLE_SYNC_UPDATE_SITE" = "true",
     "ConnectionString"                = "",
