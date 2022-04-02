@@ -70,7 +70,7 @@ namespace PeepApi
 
             if (!string.IsNullOrEmpty(person))
             {
-                data = data.Where(a => a.Person.ToLower() == person).ToList();
+                data = data.Where(a => a.Person.ToLower() == person.ToString().ToLower()).ToList();
             }
 
 
