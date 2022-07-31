@@ -21,6 +21,7 @@ namespace PeepApi
     public class PeepApi
     {
         private readonly BlobContainerClient _blobContainerClient;
+        private static List<JsonData> _data;
 
         public PeepApi(BlobServiceClient blobServiceClient)
         {
@@ -38,9 +39,9 @@ namespace PeepApi
         public async Task<IActionResult> SearchV2([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "v2/Search")] HttpRequest req)
         {
 
-            var searchTerm = req.Query["searchTerm"]; 
-            var seriesNumber = req.Query["seriesNumber"]; 
-            var episodeNumber = req.Query["episodeNumber"]; 
+            var searchTerm = req.Query["searchTerm"];
+            var seriesNumber = req.Query["seriesNumber"];
+            var episodeNumber = req.Query["episodeNumber"];
             var person = req.Query["person"];
 
             string searchCleaned = null;
@@ -49,32 +50,36 @@ namespace PeepApi
 
             int matchCount = 0;
 
-            BlobClient blobClient = _blobContainerClient.GetBlobClient("content.json");
+            if (_data == null)
+            {
 
-            var content = await blobClient.DownloadAsync();
-            var json = content.Value.Content;
+                BlobClient blobClient = _blobContainerClient.GetBlobClient("content.json");
 
-            var data = await JsonSerializer.DeserializeAsync<List<JsonData>>(json);
+                var content = await blobClient.DownloadAsync();
+                var json = content.Value.Content;
+
+                _data = await JsonSerializer.DeserializeAsync<List<JsonData>>(json);
+            }
             var quotes = new List<(string quote, string episode, string person)>();
 
 
             if (!string.IsNullOrEmpty(seriesNumber))
             {
-                data = data.Where(a => a.SeriesNumber == int.Parse(seriesNumber)).ToList();
+                _data = _data.Where(a => a.SeriesNumber == int.Parse(seriesNumber)).ToList();
             }
 
             if (!string.IsNullOrEmpty(episodeNumber))
             {
-                data = data.Where(a => a.EpisodeNumber == int.Parse(episodeNumber)).ToList();
+                _data = _data.Where(a => a.EpisodeNumber == int.Parse(episodeNumber)).ToList();
             }
 
             if (!string.IsNullOrEmpty(person))
             {
-                data = data.Where(a => a.Person.ToLower() == person.ToString().ToLower()).ToList();
+                _data = _data.Where(a => a.Person.ToLower() == person.ToString().ToLower()).ToList();
             }
 
 
-            foreach (var quote in data)
+            foreach (var quote in _data)
             {
                 if (!string.IsNullOrEmpty(searchCleaned))
                 {
@@ -185,6 +190,6 @@ namespace PeepApi
 
         }
 
-       
+
     }
 }
