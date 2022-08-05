@@ -79,7 +79,7 @@ namespace PeepApi
             }
 
 
-            Parallel.ForEach(_data, quote =>
+            foreach (var quote in _data)
             {
                 if (!string.IsNullOrEmpty(searchCleaned))
                 {
@@ -101,10 +101,10 @@ namespace PeepApi
                     matchCount += 1;
 
                 }
-            });
+            }
 
 
-            return new OkObjectResult(new SearchResult() { Count = matchCount, Results = quotes.OrderBy(a => a.episode).Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
+            return new OkObjectResult(new SearchResult() { Count = matchCount, Results = quotes.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
 
         }
 
