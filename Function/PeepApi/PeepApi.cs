@@ -39,10 +39,10 @@ namespace PeepApi
         public async Task<IActionResult> SearchV2([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "v2/Search")] HttpRequest req)
         {
 
-            var searchTerm = req.Query["searchTerm"];
-            var seriesNumber = req.Query["seriesNumber"];
-            var episodeNumber = req.Query["episodeNumber"];
-            var person = req.Query["person"];
+            var searchTerm = req.Query["searchTerm"].ToString();
+            var seriesNumber = req.Query["seriesNumber"].ToString();
+            var episodeNumber = req.Query["episodeNumber"].ToString();
+            var person = req.Query["person"].ToString();
 
             string searchCleaned = null;
             if (!string.IsNullOrEmpty(searchTerm))
@@ -60,26 +60,31 @@ namespace PeepApi
 
                 _data = await JsonSerializer.DeserializeAsync<List<JsonData>>(json);
             }
+            var dataContent = _data;
             var quotes = new List<(string quote, string episode, string person)>();
 
 
             if (!string.IsNullOrEmpty(seriesNumber))
             {
-                _data = _data.Where(a => a.SeriesNumber == int.Parse(seriesNumber)).ToList();
+                dataContent = dataContent.Where(a => a.SeriesNumber == int.Parse(seriesNumber)).ToList();
             }
 
             if (!string.IsNullOrEmpty(episodeNumber))
             {
-                _data = _data.Where(a => a.EpisodeNumber == int.Parse(episodeNumber)).ToList();
+                dataContent = dataContent.Where(a => a.EpisodeNumber == int.Parse(episodeNumber)).ToList();
             }
 
             if (!string.IsNullOrEmpty(person))
             {
-                _data = _data.Where(a => a.Person.ToLower() == person.ToString().ToLower()).ToList();
+                var lowerPerson = person.ToLower();
+                if (lowerPerson == "alan" || lowerPerson == "johnson")
+                    dataContent = dataContent.Where(a => a.Person.ToLower() == "alan" || a.Person.ToLower() == "johnson").ToList();
+                else
+                    dataContent = dataContent.Where(a => a.Person.ToLower() == person.ToString().ToLower()).ToList();
             }
 
 
-            foreach (var quote in _data)
+            foreach (var quote in dataContent)
             {
                 if (!string.IsNullOrEmpty(searchCleaned))
                 {
