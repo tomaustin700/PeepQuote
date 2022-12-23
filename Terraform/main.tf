@@ -100,6 +100,9 @@ resource "azurerm_storage_account" "imagestorage" {
   account_replication_type        = "LRS"
   access_tier                     = "Cool"
   allow_nested_items_to_be_public = true
+  custom_domain {
+    name = "images.peepquote.com"
+  }
 }
 
 resource "azurerm_storage_container" "imagecontainer" {
