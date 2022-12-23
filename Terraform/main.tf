@@ -99,8 +99,8 @@ resource "azurerm_storage_account" "imagestorage" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
   access_tier              = "Cool"
-  static_website {
-
+  blob_public_access {
+    read = true
   }
 }
 
