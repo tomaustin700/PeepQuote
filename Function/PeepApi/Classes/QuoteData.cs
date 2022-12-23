@@ -15,5 +15,7 @@ namespace PeepApi.Classes
         public string Episode { get; set; }
         [JsonPropertyName("person")]
         public string Person { get; set; }
+        [JsonPropertyName("image")]
+        public string Image { get; set; }
     }
 }

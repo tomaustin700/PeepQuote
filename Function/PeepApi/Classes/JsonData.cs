@@ -13,5 +13,7 @@ namespace PeepApi.Classes
         public int SeriesNumber { get; set; }
         public int EpisodeNumber { get; set; }
         public string EpisodeName { get; set; }
+        public string Image { get; set; }
+
     }
 }

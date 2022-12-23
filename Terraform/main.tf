@@ -49,6 +49,7 @@ resource "azurerm_storage_account" "scriptstorage" {
   location                 = azurerm_resource_group.rg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+  access_tier              = "Cool"
 }
 
 resource "azurerm_storage_container" "scriptcontainer" {

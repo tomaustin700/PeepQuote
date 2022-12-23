@@ -61,7 +61,7 @@ namespace PeepApi
                 _data = await JsonSerializer.DeserializeAsync<List<JsonData>>(json);
             }
             var dataContent = _data;
-            var quotes = new List<(string quote, string episode, string person)>();
+            var quotes = new List<(string quote, string episode, string person, string image)>();
 
 
             if (!string.IsNullOrEmpty(seriesNumber))
@@ -96,20 +96,20 @@ namespace PeepApi
                     if (mCount > 0)
                     {
                         matchCount += mCount;
-                        quotes.Add((quote.Quote.Trim(), $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
+                        quotes.Add((quote.Quote.Trim(), $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person, quote.Image));
 
                     }
                 }
                 else
                 {
-                    quotes.Add((quote.Quote.Trim(), $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person));
+                    quotes.Add((quote.Quote.Trim(), $"s{quote.SeriesNumber}e{quote.EpisodeNumber}" + $" - {quote.EpisodeName}", quote.Person, quote.Image));
                     matchCount += 1;
 
                 }
             }
 
 
-            return new OkObjectResult(new SearchResult() { Count = matchCount, Results = quotes.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode }) });
+            return new OkObjectResult(new SearchResult() { Count = matchCount, Results = quotes.Select(a => new QuoteData() { Quote = a.quote, Person = a.person, Episode = a.episode, Image = a.image.Replace(" ", "%20") }) });
 
         }
 
