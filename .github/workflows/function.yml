@@ -2,7 +2,6 @@ name: Build and deploy .NET Core Function App to Azure functions app
 on:
   push:
     paths-ignore:
-      - "Terraform/**"
       - ".github/workflows/terraform.yml"
     branches:
       - mains
