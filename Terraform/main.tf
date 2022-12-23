@@ -103,8 +103,3 @@ resource "azurerm_storage_account" "imagestorage" {
   }
 }
 
-resource "azurerm_storage_container" "imagecontainer" {
-  name                  = "imagecontainer"
-  storage_account_name  = azurerm_storage_account.imagestorage.name
-  container_access_type = "private"
-}
