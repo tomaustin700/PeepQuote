@@ -3,8 +3,9 @@ on:
   push:
     paths-ignore:
         - 'Terraform/**'
+        - '.github/workflows/terraform.yml'
     branches:
-    - main
+    - mains
 env:
   AZURE_FUNCTIONAPP_NAME: peepquote
   AZURE_FUNCTIONAPP_PACKAGE_PATH: PeepApi/publish
