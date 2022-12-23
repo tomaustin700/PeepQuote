@@ -93,15 +93,13 @@ resource "azurerm_function_app" "function" {
 }
 
 resource "azurerm_storage_account" "imagestorage" {
-  name                     = "peepimagestorage"
-  resource_group_name      = azurerm_resource_group.rg.name
-  location                 = azurerm_resource_group.rg.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  access_tier              = "Cool"
-  blob_public_access {
-    read = true
-  }
+  name                            = "peepimagestorage"
+  resource_group_name             = azurerm_resource_group.rg.name
+  location                        = azurerm_resource_group.rg.location
+  account_tier                    = "Standard"
+  account_replication_type        = "LRS"
+  access_tier                     = "Cool"
+  allow_nested_items_to_be_public = true
 }
 
 resource "azurerm_storage_container" "imagecontainer" {
